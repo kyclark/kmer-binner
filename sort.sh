@@ -5,7 +5,7 @@ fi
 
 IN_DIR=$1
 CWD=$PWD
-ADD=$CWD/add.pl
+PREFIXER=$CWD/prefixer.pl
 SORTED_DIR=$CWD/sorted
 
 if [[ ! -d $IN_DIR ]]; then
@@ -27,8 +27,12 @@ while read FILE; do
   printf "%5d: %s\n" $i $FILE
   LOCS=$(find $IN_DIR -type f -name $FILE)
 
+  #
+  # The "bin" (e.g., AACTG) isn't stored in the file, so
+  # after sorting, we add it back.
+  #
   for F in $LOCS; do
-    sort $F | $ADD -p $FILE > $F.sorted
+    sort $F | $PREFIXER -p $FILE > $F.sorted
   done
 
   SORTED=$(find $IN_DIR -type f -name $FILE.sorted)
