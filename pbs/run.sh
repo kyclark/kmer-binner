@@ -39,7 +39,7 @@ while read FILE; do
 
   printf "%5d: %s\n" $i $(basename $FILE)
 
-  time $CWD/binner.pl -q -f $FILE -o $OUT_DIR
+  time $BIN/../scripts/binner.pl -q -f $FILE -o $OUT_DIR
 done < $TMP_FILES
 
 echo Done.

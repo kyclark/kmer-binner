@@ -2,12 +2,16 @@
 
 set -u
 
-export CWD=$PWD
-export OUT_DIR=$CWD/out
+export BIN="$( readlink -f -- "${0%/*}" )"
+export OUT_DIR=$BIN/../out
 export STEP_SIZE=5
+export FILES_LIST=~/$$.in
+
 COMMON=/home/u20/kyclark/bin/common.sh
 EMAIL=kyclark@email.arizona.edu
 GROUP=mbsulli
+PROG=$(basename "$0" ".sh")
+PBSOUT_DIR="$BIN/out/$PROG"
 
 if [ -e $COMMON ]; then
   source $COMMON
@@ -15,9 +19,13 @@ else
   echo COMMON \"$COMMON\" not found
 fi
 
-IN_DIRS="/rsgrps/bhurwitz/hurwitzlab/data/reference/mouse_genome/20141111 /rsgrps/bhurwitz/hurwitzlab/data/reference/soybean /rsgrps/bhurwitz/hurwitzlab/data/reference/yeast /rsgrps/bhurwitz/hurwitzlab/data/reference/wheat /rsgrps/bhurwitz/hurwitzlab/data/reference/medicago /rsgrps/bhurwitz/hurwitzlab/data/reference/zea_mays/v3"
+if [[ ! -d $OUT_DIR ]]; then
+  mkdir -p $OUT_DIR
+fi
 
-export FILES_LIST=~/$$.in
+init_dirs "$PBSOUT_DIR" "$OUT_DIR"
+
+IN_DIRS="/rsgrps/bhurwitz/hurwitzlab/data/reference/mouse_genome/20141111 /rsgrps/bhurwitz/hurwitzlab/data/reference/soybean /rsgrps/bhurwitz/hurwitzlab/data/reference/yeast /rsgrps/bhurwitz/hurwitzlab/data/reference/wheat /rsgrps/bhurwitz/hurwitzlab/data/reference/medicago /rsgrps/bhurwitz/hurwitzlab/data/reference/zea_mays/v3"
 
 find $IN_DIRS -type f > $FILES_LIST
 
@@ -42,14 +50,9 @@ fi
 
 GROUP_ARG="-W group_list=${GROUP:=bhurwitz}"
 
-PROG=$(basename "$0" ".sh")
-PBSOUT_DIR="$CWD/out/$PROG"
+#qsub -I -N kmer-bin $GROUP_ARG $EMAIL_ARG -j oe -o "$PBSOUT_DIR" -v BIN,STEP_SIZE,FILES_LIST,OUT_DIR $BIN/run.sh
 
-init_dirs "$PBSOUT_DIR" "$OUT_DIR"
-
-#qsub -I -N kmer-bin $GROUP_ARG $EMAIL_ARG -j oe -o "$PBSOUT_DIR" -v CWD,STEP_SIZE,FILES_LIST,OUT_DIR $CWD/run.sh
-
-JOB=$(qsub -N kmer-bin $GROUP_ARG $JOBS_ARG $EMAIL_ARG -j oe -o "$PBSOUT_DIR" -v CWD,STEP_SIZE,FILES_LIST,OUT_DIR $CWD/run.sh)
+JOB=$(qsub -N kmer-bin $GROUP_ARG $JOBS_ARG $EMAIL_ARG -j oe -o "$PBSOUT_DIR" -v BIN,STEP_SIZE,FILES_LIST,OUT_DIR $BIN/run.sh)
 
 if [ $? -eq 0 ]; then
   echo Submitted job \"$JOB\" for you in steps of \"$STEP_SIZE.\" Aloha.
