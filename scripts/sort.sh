@@ -16,7 +16,7 @@ if [[ ! -d $SORTED_DIR ]]; then
   mkdir -p $SORTED_DIR
 fi
 
-FILES='/tmp/files'
+FILES=$(mktemp)
 
 find $IN_DIR -type f | perl -MFile::Basename -ne 'print basename($_)' \
   | sort | uniq > $FILES

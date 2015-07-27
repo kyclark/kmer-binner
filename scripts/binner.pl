@@ -6,17 +6,16 @@ use strict;
 use warnings;
 use feature 'say';
 use autodie;
-use Data::Dump 'dump';
 use Cwd 'cwd';
+use Data::Dump 'dump';
 use File::Basename qw(basename fileparse dirname);
-use File::Path qw(make_path);
 use File::Find::Rule;
+use File::Path qw(make_path);
 use File::Spec::Functions;
 use Getopt::Long;
-use Math::Combinatorics;
 use Pod::Usage;
 use Readonly;
-use DBI;
+#use Math::Combinatorics;
 
 Readonly my $BIN_SIZE => 5; # 4 ^ 5 = 1025 < max num. open files
 
@@ -25,15 +24,19 @@ main();
 
 # --------------------------------------------------
 sub main {
-    my $in_dir    = '';
-    my $out_dir   = '';
-    my $kmer_size = 20;
+    my $in_dir     = '';
+    my $out_dir    = '';
+    my $files_list = '';
+    my $kmer_size  = 20;
+    my $quiet      = 0;
     my ($help, $man_page);
 
     GetOptions(
-        'i|in-dir=s'  => \$in_dir,
-        'o|out-dir:s' => \$out_dir,
+        'o|out-dir=s' => \$out_dir,
+        'i|in-dir:s'  => \$in_dir,
+        'f|files:s'   => \$files_list,
         'k|kmer:i'    => \$kmer_size,
+        'q|quiet'     => \$quiet,
         'help'        => \$help,
         'man'         => \$man_page,
     ) or pod2usage(2);
@@ -45,31 +48,56 @@ sub main {
         });
     }
 
-    unless (-d $in_dir) {
-        pod2usage("Bad input dir ($in_dir)");
+    if ($in_dir && $files_list) {
+        pod2usage('Please just one input source (dir or file)');
     }
 
-    my @files = File::Find::Rule->file()->in($in_dir);
+    unless ($in_dir || $files_list) {
+        pod2usage('No input source (-f|-i)');
+    }
 
-    unless (@files) {
-        pod2usage("No files found in '$in_dir'");
+    my @files;
+    if ($in_dir) {
+        unless (-d $in_dir) {
+            pod2usage("Bad input dir ($in_dir)");
+        }
+
+        @files = File::Find::Rule->file()->in($in_dir);
+
+        unless (@files) {
+            pod2usage("No files found in '$in_dir'");
+        }
+    }
+    else {
+        @files = grep { -e $_ } split(/\s*,\s*/, $files_list);
+
+        unless (@files) {
+            pod2usage("No good files found in '$files_list'");
+        }
     }
 
     unless (-d $out_dir) {
         make_path($out_dir);
     }
 
+    my $report = sub { $quiet || say @_ };
     my $i;
     for my $file (@files) {
         my $basename = basename($file);
-        printf "%5d: %s\n", ++$i, $basename;
+
+        $report->(sprintf("%5d: %s", ++$i, $basename));
 
         open my $fh, '<', $file;
         local $/ = '>';
 
         my $file_out_dir = catfile($out_dir, $basename);
 
-        unless (-d $file_out_dir) {
+        if (-d $file_out_dir) {
+            if (my @existing = File::Find::Rule->file()->in($file_out_dir)) {
+                unlink @existing;
+            }
+        }
+        else {
             make_path($file_out_dir);
         }
 
@@ -97,7 +125,7 @@ sub main {
         %FHS = ();
     }
 
-    say "Done.";
+    $report->('Done.');
 }
 
 # --------------------------------------------------
@@ -122,7 +150,7 @@ binner.pl
 
 =head1 SYNOPSIS
 
-  binner.pl -o kmer-out -l location-out -i input.fasta 
+  binner.pl [-f /path/to/file] [-i /path/to/fasta] -o /path/to/kmers
 
   Required Arguments:
 
