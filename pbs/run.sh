@@ -7,7 +7,7 @@
 #PBS -l walltime=24:00:00
 #PBS -l cput=24:00:00
 
-COMMON=/home/u20/kyclark/bin/common.sh
+COMMON=$SCRIPTS/common.sh
 
 if [ -e $COMMON ]; then
   source $COMMON
@@ -39,7 +39,7 @@ while read FILE; do
 
   printf "%5d: %s\n" $i $(basename $FILE)
 
-  time $BIN/../scripts/binner.pl -q -f $FILE -o $OUT_DIR
+  time $SCRIPTS/scripts/binner.pl -q -f $FILE -o $OUT_DIR
 done < $TMP_FILES
 
 echo Done.

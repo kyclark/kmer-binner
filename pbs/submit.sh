@@ -6,8 +6,9 @@ export BIN="$( readlink -f -- "${0%/*}" )"
 export OUT_DIR=$BIN/../out
 export STEP_SIZE=5
 export FILES_LIST=~/$$.in
+export SCRIPTS=$BIN/../scripts
 
-COMMON=/home/u20/kyclark/bin/common.sh
+COMMON=$SCRIPTS/common.sh
 EMAIL=kyclark@email.arizona.edu
 GROUP=mbsulli
 PROG=$(basename "$0" ".sh")
@@ -52,7 +53,7 @@ GROUP_ARG="-W group_list=${GROUP:=bhurwitz}"
 
 #qsub -I -N kmer-bin $GROUP_ARG $EMAIL_ARG -j oe -o "$PBSOUT_DIR" -v BIN,STEP_SIZE,FILES_LIST,OUT_DIR $BIN/run.sh
 
-JOB=$(qsub -N kmer-bin $GROUP_ARG $JOBS_ARG $EMAIL_ARG -j oe -o "$PBSOUT_DIR" -v BIN,STEP_SIZE,FILES_LIST,OUT_DIR $BIN/run.sh)
+JOB=$(qsub -N kmer-bin $GROUP_ARG $JOBS_ARG $EMAIL_ARG -j oe -o "$PBSOUT_DIR" -v SCRIPTS,BIN,STEP_SIZE,FILES_LIST,OUT_DIR $BIN/run.sh)
 
 if [ $? -eq 0 ]; then
   echo Submitted job \"$JOB\" for you in steps of \"$STEP_SIZE.\" Aloha.
