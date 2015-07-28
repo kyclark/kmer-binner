@@ -57,9 +57,6 @@ runWithOptions opts = do
   let outDir = optOutDir opts
   inFiles <- locateFiles (optInFile opts) (optInDir opts)
 
-  print inFiles
-
-
   if (null inFiles)
     then putStrLn "Could not find input files"
     else mapM_ (process outDir (optKmerSize opts) (optBinSize opts)) inFiles 
