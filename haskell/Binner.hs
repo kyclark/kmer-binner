@@ -94,7 +94,7 @@ process outDir kmerSize binSize file = do
   fileHandles <- 
     Map.fromList `fmap` mapM (
       \x -> do 
-        h <- openFile (joinPath [outDir, x]) WriteMode 
+        h <- openFile (joinPath [dir, x]) WriteMode 
         return (x,h)
       ) allMers
 
