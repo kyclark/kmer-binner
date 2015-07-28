@@ -1,19 +1,17 @@
-if [ $# -eq 0 ]; then
-  echo Usage: $(basename $0) dir
+if [ $# -ne 2 ]; then
+  echo Usage: $(basename $0) in-dir out-dir
   exit 1
 fi
 
 IN_DIR=$1
-CWD=$PWD
-PREFIXER=$CWD/prefixer.pl
-SORTED_DIR=$CWD/sorted
+OUT_DIR=$2
 
 if [[ ! -d $IN_DIR ]]; then
   echo Bad DIR \"$IN_DIR\"
 fi
 
-if [[ ! -d $SORTED_DIR ]]; then
-  mkdir -p $SORTED_DIR
+if [[ ! -d $OUT_DIR ]]; then
+  mkdir -p $OUT_DIR
 fi
 
 FILES=$(mktemp)
@@ -32,12 +30,12 @@ while read FILE; do
   # after sorting, we add it back.
   #
   for F in $LOCS; do
-    sort $F | $PREFIXER -p $FILE > $F.sorted
+    sort $F | sed "s/^/$FILE" > $F.sorted
   done
 
   SORTED=$(find $IN_DIR -type f -name $FILE.sorted)
 
-  sort -m $SORTED | uniq > $SORTED_DIR/$FILE
+  sort -m $SORTED | uniq > $OUT_DIR/$FILE
 
   rm $SORTED
 done < $FILES
