@@ -3,7 +3,7 @@
 set -u
 
 export BIN="$( readlink -f -- "${0%/*}" )"
-export OUT_DIR=$BIN/../out
+export OUT_DIR=$BIN/../binned
 export STEP_SIZE=5
 export FILES_LIST=~/$$.in
 export SCRIPTS=$BIN/../scripts
