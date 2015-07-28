@@ -15,4 +15,6 @@ cabal.sandbox.config
 *.aux
 *.hp
 *.swp
-out/
+slurm/out
+slurm/params
+pbs/out
