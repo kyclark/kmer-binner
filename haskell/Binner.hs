@@ -4,42 +4,45 @@ import Control.Monad
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.HashMap as Map
 import qualified Data.Map as DM
+import System.Directory
 import System.IO
 import System.Environment
+import System.FilePath.Posix (combine, takeFileName)
 
 main :: IO ()
 main = do
-  [f] <- getArgs
-  reads <- readFasta f
---  reads <- readFasta "test.fa"
-  let kmers = concatMap (findKmers 20 . unSD . seqdata) reads
-  let f = B.take 5
-  let binned      = DM.fromListWith (++) [(f k, [k]) | k <- kmers]
-  let allMers     = replicateM 5 "ACTG"
-  let fileHandles = Map.fromList $ map (\x -> (x, openFile ("out/" ++ x) WriteMode)) allMers 
-
-  --mapM_ printMer kmers 
-
-  mapM_ (\bin -> do
-    let fh   = Map.lookup (B.unpack bin) fileHandles
-    let mers = DM.lookup bin binned
-
-    case fh of
-      Nothing -> putStrLn ("Missing handle for " ++ (B.unpack bin))
-      Just fh -> do
-        h <- fh
-        case mers of 
-          Nothing -> putStrLn ("No mers for " ++ (B.unpack bin))
-          Just m  -> mapM_ (B.hPutStrLn h) m
-    ) $ DM.keys binned
-
-  --mapM_ (printMer fileHandles) kmers 
-  mapM_ (\ioh -> do { h <- ioh; hClose h }) $ Map.elems fileHandles
+  files <- getArgs
+  mapM_ process files
   putStrLn "Done."
 
---  let binned = Map.fromList $ map (\k -> (B.take 5 k, k)) kmers
---  print binned
---  let kmers       = concatMap (findKmersBS 20 . seqdata) reads
+process file = do
+  let fileName = takeFileName file
+
+  putStrLn $ "Processing " ++ fileName
+
+  reads <- readFasta file
+  let kmers   = concatMap (findKmers 20 . unSD . seqdata) reads
+  let allMers = replicateM 5 "ACTG"
+  let outDir  = combine "out" fileName
+  outExists <- doesDirectoryExist outDir
+  unless outExists (createDirectoryIfMissing True outDir)
+
+  fileHandles <- 
+    Map.fromList `fmap` mapM (
+      \x -> do 
+        h <- openFile (combine outDir x) WriteMode 
+        return (x,h)
+      ) allMers
+
+  mapM_ (\kmer -> do
+    let bin = toString $ B.take 5 kmer
+    let h   = Map.lookup bin fileHandles
+    case h of
+      Just handle -> B.hPutStrLn handle $ B.drop 5 kmer
+      Nothing -> putStrLn $ "No handle for " ++ bin
+    ) kmers 
+
+  mapM_ hClose $ Map.elems fileHandles
 
 -- # --------------------------------------------------
 findKmers :: Integer -> B.ByteString -> [B.ByteString]
@@ -49,16 +52,3 @@ findKmers k xs = findKmers' n k xs
           | n' > 0 = B.take (fromIntegral k') xs'
              : findKmers' (n' - 1) k' (B.tail xs')
           | otherwise = []
-
--- # --------------------------------------------------
---printMer mer = do
---  let bin = toString $ B.take 5 mer
---  B.appendFile ("out/" ++ bin) (B.drop 5 mer)
-
--- # --------------------------------------------------
---printMer :: Maybe IO Handle -> [Maybe B.ByteString] -> IO ()
---printMer fh mers = do
---  case handle of 
---    Nothing  -> putStrLn $ "Missing " ++ bin ++ " handle"
---    Just ioh -> do h <- ioh
---                   B.hPutStrLn h (B.drop 5 mer)
