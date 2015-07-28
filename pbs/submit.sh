@@ -26,12 +26,20 @@ fi
 
 init_dirs "$PBSOUT_DIR" "$OUT_DIR"
 
-IN_DIRS="/rsgrps/bhurwitz/hurwitzlab/data/reference/mouse_genome/20141111 /rsgrps/bhurwitz/hurwitzlab/data/reference/soybean /rsgrps/bhurwitz/hurwitzlab/data/reference/yeast /rsgrps/bhurwitz/hurwitzlab/data/reference/wheat /rsgrps/bhurwitz/hurwitzlab/data/reference/medicago /rsgrps/bhurwitz/hurwitzlab/data/reference/zea_mays/v3"
+REF_DIR=/rsgrps/bhurwitz/hurwitzlab/data/reference
+IN_DIRS="$REF_DIR/a_xylosoxidans $REF_DIR/mouse_genome/20141111 $REF_DIR/glycine_max $REF_DIR/yeast $REF_DIR/wheat $REF_DIR/medicago_truncatula $REF_DIR/zea_mays"
 
-find $IN_DIRS -type f > $FILES_LIST
+#find $IN_DIRS -type f > $FILES_LIST
+TMP=$(mktemp)
+find $IN_DIRS -type f > $TMP
+while read FILE; do
+  if [[ ! -d "$OUT_DIR/$(basename $FILE)" ]]; then
+    echo $FILE >> $FILES_LIST
+  fi
+done < $TMP
+rm $TMP
 
 NUM_FILES=$(lc $FILES_LIST)
-
 echo Found \"$NUM_FILES\" files
 
 if [ $NUM_FILES -lt 1 ]; then
@@ -50,8 +58,6 @@ if [[ ! -z $EMAIL ]]; then
 fi
 
 GROUP_ARG="-W group_list=${GROUP:=bhurwitz}"
-
-#qsub -I -N kmer-bin $GROUP_ARG $EMAIL_ARG -j oe -o "$PBSOUT_DIR" -v BIN,STEP_SIZE,FILES_LIST,OUT_DIR $BIN/run.sh
 
 JOB=$(qsub -N kmer-bin $GROUP_ARG $JOBS_ARG $EMAIL_ARG -j oe -o "$PBSOUT_DIR" -v SCRIPTS,BIN,STEP_SIZE,FILES_LIST,OUT_DIR $BIN/run.sh)
 
