@@ -106,13 +106,14 @@ sub main {
             next unless $fasta;
 
             my ($id, @seq) = split /\n/, $fasta;
-            my $seq        = join '', @seq;
+            my $seq        = uc(join '', @seq);
             my $num_kmers  = length($seq) + 1 - $kmer_size;
 
             next unless $num_kmers > 0;
 
             for my $pos (0 .. $num_kmers - 1) {
                 my $kmer = substr($seq, $pos, $kmer_size);
+                next if index($kmer, 'N') > 0;
                 my $bin  = substr($kmer, 0, $BIN_SIZE);
                 my $out  = fh($bin, $file_out_dir);
                 say $out substr($kmer, $BIN_SIZE);
