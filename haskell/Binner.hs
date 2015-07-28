@@ -3,7 +3,6 @@ import Bio.Sequence.Fasta
 import Control.Monad
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.HashMap as Map
-import qualified Data.Map as DM
 import System.Directory
 import System.IO
 import System.Environment
