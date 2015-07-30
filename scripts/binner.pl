@@ -15,7 +15,6 @@ use File::Spec::Functions;
 use Getopt::Long;
 use Pod::Usage;
 use Readonly;
-#use Math::Combinatorics;
 
 Readonly my $BIN_SIZE => 5; # 4 ^ 5 = 1025 < max num. open files
 
@@ -24,19 +23,13 @@ main();
 
 # --------------------------------------------------
 sub main {
-    my $in_dir     = '';
     my $out_dir    = '';
     my $files_list = '';
-    my $kmer_size  = 20;
     my $quiet      = 0;
     my ($help, $man_page);
 
     GetOptions(
         'o|out-dir=s' => \$out_dir,
-        'i|in-dir:s'  => \$in_dir,
-        'f|files:s'   => \$files_list,
-        'k|kmer:i'    => \$kmer_size,
-        'q|quiet'     => \$quiet,
         'help'        => \$help,
         'man'         => \$man_page,
     ) or pod2usage(2);
@@ -48,85 +41,23 @@ sub main {
         });
     }
 
-    if ($in_dir && $files_list) {
-        pod2usage('Please just one input source (dir or file)');
-    }
-
-    unless ($in_dir || $files_list) {
-        pod2usage('No input source (-f|-i)');
-    }
-
-    my @files;
-    if ($in_dir) {
-        unless (-d $in_dir) {
-            pod2usage("Bad input dir ($in_dir)");
-        }
-
-        @files = File::Find::Rule->file()->in($in_dir);
-
-        unless (@files) {
-            pod2usage("No files found in '$in_dir'");
-        }
-    }
-    else {
-        @files = grep { -e $_ } split(/\s*,\s*/, $files_list);
-
-        unless (@files) {
-            pod2usage("No good files found in '$files_list'");
-        }
+    unless ($out_dir) {
+        pod2usage('Missing output dir');
     }
 
     unless (-d $out_dir) {
         make_path($out_dir);
     }
 
-    my $report = sub { $quiet || say @_ };
-    my $i;
-    for my $file (@files) {
-        my $basename = basename($file);
+    while (my $line = <>) {
+        chomp $line;
 
-        $report->(sprintf("%5d: %s", ++$i, $basename));
-
-        open my $fh, '<', $file;
-        local $/ = '>';
-
-        my $file_out_dir = catfile($out_dir, $basename);
-
-        if (-d $file_out_dir) {
-            if (my @existing = File::Find::Rule->file()->in($file_out_dir)) {
-                unlink @existing;
-            }
-        }
-        else {
-            make_path($file_out_dir);
-        }
-
-        while (my $fasta = <$fh>) {
-            chomp $fasta;
-            next unless $fasta;
-
-            my ($id, @seq) = split /\n/, $fasta;
-            my $seq        = uc(join '', @seq);
-            my $num_kmers  = length($seq) + 1 - $kmer_size;
-
-            next unless $num_kmers > 0;
-
-            for my $pos (0 .. $num_kmers - 1) {
-                my $kmer = substr($seq, $pos, $kmer_size);
-                next if index($kmer, 'N') > 0;
-                my $bin  = substr($kmer, 0, $BIN_SIZE);
-                my $out  = fh($bin, $file_out_dir);
-                say $out substr($kmer, $BIN_SIZE);
-            }
-        }
-
-        for my $fh (values %FHS) {
-            close $fh;
-        }
-        %FHS = ();
+        my ($kmer, $count) = split /\s/, $line;
+        next if index($kmer, 'N') > 0;
+        my $bin  = substr($kmer, 0, $BIN_SIZE);
+        my $out  = fh($bin, $out_dir);
+        say $out substr($kmer, $BIN_SIZE);
     }
-
-    $report->('Done.');
 }
 
 # --------------------------------------------------
@@ -151,23 +82,20 @@ binner.pl
 
 =head1 SYNOPSIS
 
-  binner.pl [-f /path/to/file] [-i /path/to/fasta] -o /path/to/kmers
+  jellyfish dump data.jf | binner.pl -o /path/to/bins
 
   Required Arguments:
 
-    -i|--in-dir    Input directory of FASTA files
     -o|--out-dir   Directory to write the binned k-mers
 
   Options:
 
-    -k|--kmer      Size of the kmers (default "20")
     --help         Show brief help and exit
     --man          Show full documentation
 
 =head1 DESCRIPTION
 
-For each FASTA file in the "in-dir," split the sequences into k-mers
-and then bin by the first 5 nucleotides.
+Bins the output of "jellyfish dump" for sorting and combining.
 
 =head1 AUTHOR
 
