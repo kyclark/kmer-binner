@@ -3,11 +3,13 @@
 set -u
 
 export BIN="$( readlink -f -- "${0%/*}" )"
-export OUT_DIR=$BIN/../binned
+export OUT_DIR=/rsgrps/bhurwitz/kyclark/mouse/data/host-binned
 export STEP_SIZE=5
 export FILES_LIST=~/$$.in
 export SCRIPTS=$BIN/../scripts
+export INPUT_GROUP_FILE=""
 
+IN_DIRS="/rsgrps/bhurwitz/hurwitzlab/data/reference/jellyfish/mouse-host"
 COMMON=$SCRIPTS/common.sh
 EMAIL=kyclark@email.arizona.edu
 GROUP=mbsulli
@@ -26,10 +28,6 @@ fi
 
 init_dirs "$PBSOUT_DIR" "$OUT_DIR"
 
-REF_DIR=/rsgrps/bhurwitz/hurwitzlab/data/reference
-IN_DIRS="$REF_DIR/a_xylosoxidans $REF_DIR/mouse_genome/20141111 $REF_DIR/glycine_max $REF_DIR/yeast $REF_DIR/wheat $REF_DIR/medicago_truncatula $REF_DIR/zea_mays"
-
-#find $IN_DIRS -type f > $FILES_LIST
 TMP=$(mktemp)
 find $IN_DIRS -type f > $TMP
 while read FILE; do
@@ -47,11 +45,6 @@ if [ $NUM_FILES -lt 1 ]; then
   exit 1
 fi
 
-JOBS_ARG=""
-if [ $NUM_FILES -gt 1 ] && [ $STEP_SIZE -gt 1 ]; then
-  JOBS_ARG="-J 1-$NUM_FILES:$STEP_SIZE "
-fi
-
 EMAIL_ARG=""
 if [[ ! -z $EMAIL ]]; then
   EMAIL_ARG="-M $EMAIL -m ea"
@@ -59,7 +52,38 @@ fi
 
 GROUP_ARG="-W group_list=${GROUP:=bhurwitz}"
 
-JOB=$(qsub -N kmer-bin $GROUP_ARG $JOBS_ARG $EMAIL_ARG -j oe -o "$PBSOUT_DIR" -v SCRIPTS,BIN,STEP_SIZE,FILES_LIST,OUT_DIR $BIN/run-binner.sh)
+JOBS_ARG=""
+if [ $NUM_FILES -gt 1 ] && [ $STEP_SIZE -gt 1 ]; then
+  JOBS_ARG="-J 1-$NUM_FILES:$STEP_SIZE "
+fi
+
+DISTRIBUTOR=/rsgrps/bhurwitz/kyclark/file-distributor/distributor.pl
+
+if [ -e $DISTRIBUTOR ]; then
+  echo Working to distribute files -- gimme a sec
+
+  FILE_SIZES=$(mktemp)
+  while read FILE; do
+    ls -l $FILE | awk '{print $5 " " $9}' >> $FILE_SIZES
+  done < $FILES_LIST
+
+  INPUT_GROUP_FILE=$HOME/$PROG.input_groups
+
+  $DISTRIBUTOR $FILE_SIZES > $INPUT_GROUP_FILE
+
+  rm $FILE_SIZES
+else
+  echo Cannot find \"$DISTRIBUTOR\"
+fi
+
+if [ ${INPUT_GROUP_FILE:="x"} != "x" ] && [ -e $INPUT_GROUP_FILE ]; then
+  LAST_GROUP=$(tail -n 1 $INPUT_GROUP_FILE | cut -f 1)
+
+  JOBS_ARG="-J 1-$LAST_GROUP"
+  STEP_SIZE=0
+fi
+
+JOB=$(qsub -N kmer-bin $GROUP_ARG $JOBS_ARG $EMAIL_ARG -j oe -o "$PBSOUT_DIR" -v SCRIPTS,BIN,STEP_SIZE,FILES_LIST,OUT_DIR,INPUT_GROUP_FILE $BIN/run-binner.sh)
 
 if [ $? -eq 0 ]; then
   echo Submitted job \"$JOB\" for you in steps of \"$STEP_SIZE.\" Aloha.
