@@ -6,7 +6,7 @@ version:             0.1.0.0
 -- synopsis:            
 -- description:         
 license:             GPL-2
-license-file:        ../LICENSE
+license-file:        LICENSE
 author:              Ken Youens-Clark
 maintainer:          kyclark@gmail.com
 -- copyright:           
