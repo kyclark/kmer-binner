@@ -56,8 +56,7 @@ sub main {
         next if index($kmer, 'N') > 0;
         my $bin  = substr($kmer, 0, $BIN_SIZE);
         my $out  = fh($bin, $out_dir);
-        # need to put a bogus header for FASTA format
-        say $out ">1\n", substr($kmer, $BIN_SIZE);
+        say $out substr($kmer, $BIN_SIZE);
     }
 }
 

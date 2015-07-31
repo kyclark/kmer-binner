@@ -46,7 +46,6 @@ runWithOptions opts = do
         return (x,h)
       ) allMers
 
-  let fastaHeader = B.pack ">1"
   input <- B.getContents
   mapM_ (\line -> do
     let kmer = head $ B.words line
@@ -54,9 +53,7 @@ runWithOptions opts = do
     let h    = Map.lookup bin fileHandles
     case h of
       Nothing     -> return ()
-      Just handle -> 
-        mapM_ (B.hPutStrLn handle)
-        [fastaHeader, (B.drop (fromIntegral binSize) kmer)]
+      Just handle -> B.hPutStrLn handle $ B.drop (fromIntegral binSize) kmer
     ) $ B.lines input
 
   mapM_ hClose $ Map.elems fileHandles
